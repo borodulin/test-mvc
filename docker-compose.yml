@@ -1,0 +1,47 @@
+version: "3.7"
+services:
+  db:
+    image: mariadb
+    hostname: ${DB_HOST}
+    environment:
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_RANDOM_ROOT_PASSWORD: 'yes'
+    ports:
+    - '3306:3306'
+    networks:
+      - local
+  php-fpm:
+    image: test-mvc/php_fpm
+    build:
+      context: docker/php-fpm
+      args:
+        USER_ID: ${USER_ID:-1000}
+    volumes:
+      - .:/app
+      - ./docker/php-fpm/xdebug.ini:/usr/local/etc/php/conf.d/xdebug.ini
+    depends_on:
+      - db
+    networks:
+      - local
+  nginx:
+    image: test-mvc/nginx
+    build:
+      context: docker/nginx
+      args:
+        USER_ID: ${USER_ID:-1000}
+    volumes:
+      - .:/app
+      - ./.volumes/nginx/log:/var/log/nginx
+    environment:
+      VIRTUAL_HOST: test-mvc.devel
+    depends_on:
+      - php-fpm
+    networks:
+      - backend
+      - local
+networks:
+  local:
+  backend:
+    external: true
